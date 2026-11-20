@@ -1,36 +1,79 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ABNews — Portal Berita & Studio Redaksi
 
-## Getting Started
+Rewrite modern dari sistem legacy `news-admin` dan `news-sse` ke dalam satu aplikasi **Next.js** terintegrasi di folder `news/`.
 
-First, run the development server:
+## Teknologi
+
+- **Framework**: Next.js 16 (App Router + Cache Components + Turbopack) & React 19
+- **UI**: Tailwind CSS v4 + **DaisyUI v5** (tema `light` dan `dark` dengan switcher anti-flash)
+- **Database & ORM**: PostgreSQL 17 + **Drizzle ORM RC** (`drizzle-orm@1.0.0-rc.5`) & **Drizzle Kit RC** (`drizzle-kit@1.0.0-rc.5`)
+- **Autentikasi**: JWT Session Cookie (`jose`) + hashing password (`bcryptjs`)
+- **Runtime & Container**: Bun & Docker / Docker Compose
+
+## Fitur Utama
+
+### Portal Berita Publik
+- **Beranda (`/`)**: Ticker berita terkini, Hero Sorotan Utama, showcase kategori beserta jumlah artikel, serta daftar berita terbaru & terpopuler.
+- **Pembaca Artikel (`/news/[id]`)**: Progress bar membaca, pengatur ukuran teks, bookmark (`localStorage`), tombol bagikan, penghitung tayangan (`views`), dan berita terkait.
+- **Kategori (`/category/[id]`)**: Filter berita berdasarkan kategori dengan pengurutan terbaru/terpopuler dan pagination.
+- **Pencarian (`/search` & `Ctrl+K`)**: Pencarian judul/konten (case-insensitive `ilike`) dengan filter kategori dan pengurutan.
+- **Berita Tersimpan (`/bookmarks`)**: Daftar bacaan tersimpan di perangkat pengguna.
+
+### Editorial Admin Studio (`/admin`)
+- **Login & Setup Awal (`/admin/login`)**: Jika tabel `users` masih kosong, halaman login otomatis menampilkan form pembuatan akun admin pertama.
+- **Dashboard Analytics (`/admin`)**: Statistik total berita (published/draft), total kategori, total tayangan, daftar artikel terpopuler, dan distribusi kategori.
+- **Kelola Berita (`/admin/news`)**: Pencarian, filter kategori & status, hapus massal (*bulk delete*), dan konfirmasi modal.
+- **Editor Berita (`/admin/news/new`, `/admin/news/[id]/edit`)**: Tab *Tulis* & *Pratinjau Langsung*, toolbar heading/kutipan, ringkasan otomatis, toggle Sorotan Utama, status `published`/`draft`, serta pratinjau unggah gambar.
+- **Kelola Kategori (`/admin/categories`)**: CRUD kategori dengan gambar sampul dan deskripsi.
+
+## Menjalankan dengan Docker & PostgreSQL
+
+Semua konfigurasi Docker dan aplikasi berada di dalam folder `news/`:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cd news
+docker compose up -d --build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Port host PostgreSQL default dipetakan ke `55432` (dapat diubah melalui environment variable `POSTGRES_PORT`, sedangkan komunikasi internal antar container tetap menggunakan port `5432`).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Push skema database ke PostgreSQL container:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+cd news
+DATABASE_URL="postgresql://abnews:abnews_secret@localhost:55432/abnews" bun run db:push
+```
 
-## Learn More
+Aplikasi dapat diakses di:
+- **Portal Publik**: `http://localhost:3000`
+- **Admin Studio**: `http://localhost:3000/admin`
 
-To learn more about Next.js, take a look at the following resources:
+## Menjalankan Mode Development Lokal
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Salin file contoh environment:
+   ```bash
+   cd news
+   cp .env.example .env
+   ```
+2. Jalankan hanya container PostgreSQL:
+   ```bash
+   docker compose up -d postgres
+   ```
+3. Push skema Drizzle dan jalankan dev server:
+   ```bash
+   bun run db:push
+   bun run dev
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Script Database (Drizzle Kit)
 
-## Deploy on Vercel
+Tersedia di `news/package.json`:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Script | Perintah | Fungsi |
+| --- | --- | --- |
+| `db:generate` | `drizzle-kit generate` | Membuat file migrasi SQL |
+| `db:migrate` | `drizzle-kit migrate` | Menjalankan migrasi ke database |
+| `db:push` | `drizzle-kit push` | Sinkronisasi langsung skema ke PostgreSQL |
+| `db:pull` | `drizzle-kit pull` | Introspect skema dari database yang ada |
+| `db:studio` | `drizzle-kit studio` | Membuka Drizzle Studio |
+| `db:check` | `drizzle-kit check` | Validasi konsistensi skema & migrasi |
