@@ -1,0 +1,37 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: abnews-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: abnews
+      POSTGRES_PASSWORD: abnews_secret
+      POSTGRES_DB: abnews
+    ports:
+      - "${POSTGRES_PORT:-55432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U abnews -d abnews"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: abnews-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://abnews:abnews_secret@postgres:5432/abnews
+      SESSION_SECRET: change-this-to-a-long-random-secret-key-at-least-32-chars
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+
+volumes:
+  pgdata:
